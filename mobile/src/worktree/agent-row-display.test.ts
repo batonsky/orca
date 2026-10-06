@@ -102,6 +102,28 @@ describe('agentDisplayLabel', () => {
     ).toBe('hello there')
   })
 
+  it('accepts an older host row after JSON transport without a conversation name', () => {
+    const payload = JSON.parse(JSON.stringify(row({ lastAssistantMessage: 'Контекст сохранён' })))
+
+    expect(payload).not.toHaveProperty('conversationName')
+    expect(agentDisplayLabel(payload, 0)).toBe('Контекст сохранён')
+  })
+
+  it('keeps a renamed session identifiable after successive assistant replies', () => {
+    const named = row({ conversationName: 'Закупки — GPU', lastAssistantMessage: 'Working' })
+    const completed = { ...named, lastAssistantMessage: 'Контекст сохранён' }
+
+    expect(agentDisplayLabel(named, 0)).toBe('Закупки — GPU')
+    expect(agentDisplayLabel(completed, 0)).toBe('Закупки — GPU')
+    expect(completed.lastAssistantMessage).toBe('Контекст сохранён')
+  })
+
+  it('falls back when the host publishes an empty optional name', () => {
+    expect(
+      agentDisplayLabel(row({ conversationName: '  ', lastAssistantMessage: 'Done' }), 0)
+    ).toBe('Done')
+  })
+
   it('falls back to the decayed state label when stale', () => {
     expect(
       agentDisplayLabel(

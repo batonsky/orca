@@ -167,6 +167,16 @@ describe('areWorktreeListsEqual', () => {
     expect(areWorktreeListsEqual(first, second)).toBe(false)
   })
 
+  it('refreshes an existing row when the host is upgraded and rolled back', () => {
+    const olderHost = [worktree({ agents: [agent({ lastAssistantMessage: 'Done' })] })]
+    const newerHost = [
+      worktree({ agents: [agent({ lastAssistantMessage: 'Done', conversationName: 'Закупки' })] })
+    ]
+
+    expect(areWorktreeListsEqual(olderHost, newerHost)).toBe(false)
+    expect(areWorktreeListsEqual(newerHost, olderHost)).toBe(false)
+  })
+
   it('detects monitoring mode changes within working', () => {
     const first = [worktree({ agents: [agent({ state: 'working' })] })]
     const second = [worktree({ agents: [agent({ state: 'working', workingMode: 'monitoring' })] })]
