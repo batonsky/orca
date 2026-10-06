@@ -297,7 +297,7 @@ export function projectRuntimeMobileSessionTabs(
       id: tab.id,
       parentTabId: tab.parentTabId,
       leafId: tab.leafId,
-      title,
+      title: tab.customTitle?.trim() || title,
       ...(tab.ptyId ? { ptyId: tab.ptyId } : {}),
       ...(tab.terminalTheme ? { terminalTheme: tab.terminalTheme } : {}),
       ...(launchAgent ? { launchAgent } : {}),
