@@ -218,15 +218,20 @@ export class OrcaRuntimeWithCloseHeadlessMobileTerminalTab extends OrcaRuntimeWi
     const explicitWorktreeId = this.getValidatedExplicitWorktreeIdSelector(worktreeSelector)
     const worktreeId =
       explicitWorktreeId ?? (await this.resolveWorktreeSelector(worktreeSelector)).id
-    // Why: a renderer-authoritative host owns + republishes tab props, so a
-    // headless write would be overwritten. Persist only when headless.
-    if (this.getAvailableAuthoritativeWindow()) {
-      return { updated: true }
-    }
     const snapshot = this.mobileSessionTabsByWorktree.get(worktreeId)
     const hostTabId = snapshot
       ? (this.resolveMobileSessionHostTabId(snapshot, args.tabId) ?? args.tabId)
       : args.tabId
+    // The desktop renderer owns tab props; route renames through its existing bridge.
+    if (this.getAvailableAuthoritativeWindow()) {
+      if (args.customTitle !== undefined) {
+        if (!this.notifier?.renameTerminal) {
+          throw new Error('The desktop renderer rename bridge is unavailable')
+        }
+        this.notifier.renameTerminal(hostTabId, args.customTitle)
+      }
+      return { updated: true }
+    }
     this.persistHeadlessSessionTabProps(worktreeId, hostTabId, args)
     this.applyHeadlessSessionTabPropsToSnapshot(worktreeId, hostTabId, args)
     return { updated: true }

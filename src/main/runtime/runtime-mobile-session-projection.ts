@@ -289,6 +289,7 @@ export function projectRuntimeMobileSessionTabs(
       parentTabId: tab.parentTabId,
       leafId: tab.leafId,
       title,
+      ...(tab.customTitle !== undefined ? { customTitle: tab.customTitle } : {}),
       ...(tab.ptyId ? { ptyId: tab.ptyId } : {}),
       ...(tab.terminalTheme ? { terminalTheme: tab.terminalTheme } : {}),
       ...(launchAgent ? { launchAgent } : {}),
