@@ -30,7 +30,10 @@ export function notSignedInSentence(
     ? undefined
     : context.command
       ? say('runCommandAgain', { command: context.command })
-      : surface === 'rejection' && signIn?.agent !== 'claude' && signIn?.agent !== 'codex'
+      : surface === 'rejection' &&
+          context.messageSubmitted !== false &&
+          signIn?.agent !== 'claude' &&
+          signIn?.agent !== 'codex'
         ? say(signIn ? 'thenSendAgain' : 'signInThenSend')
         : undefined
   return joinSentences(

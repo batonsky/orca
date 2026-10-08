@@ -102,6 +102,15 @@ it('says a signed-out Codex above the composer and still sends', () => {
   expect(mocks.send).toHaveBeenCalledWith('hello', [])
 })
 
+it('leaves an auth turn row as the explanation when the catalog also says signed out', () => {
+  mocks.unavailable = { reason: 'notSignedIn', account: 'system' }
+  const row = startFailureRow({ kind: 'notSignedIn', account: 'system' })
+  mocks.journalItems = [turnRow(), { ...row, itemId: 'codex-unauthorized-error', sequence: 3 }]
+  render(pane())
+  expect(screen.queryByText(CODEX_SIGNED_OUT)).toBeNull()
+  expect(mocks.composerProps?.structuredTransport).not.toHaveProperty('unavailable')
+})
+
 it('stays dismissed for the same verdict, and shows again when it changes or comes back', () => {
   mocks.unavailable = { reason: 'notSignedIn', account: 'system' }
   const view = render(pane())

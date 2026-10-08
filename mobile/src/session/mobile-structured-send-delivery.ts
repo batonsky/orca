@@ -2,6 +2,8 @@ import type { AgentSessionSendResult } from '../../../src/shared/agent-session-w
 import { agentSessionRefusalOperationState } from '../../../src/shared/agent-session-refusal-retry'
 import { structuredAgentSessionRejectionNotice } from '../../../src/shared/structured-agent-session-rejection-words'
 import { dispatchWasWithdrawn } from '../../../src/shared/structured-agent-session-dispatch-rejection'
+import type { AgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
+import { agentSessionFailureStatedByRow } from '../../../src/shared/agent-session-visible-failures'
 import type { MobileNativeChatSendOutcome } from './mobile-native-chat-send'
 import type { StructuredAgentSessionMutationCallResult } from './mobile-structured-agent-session-rpc'
 
@@ -11,7 +13,8 @@ export type MobileStructuredSendDelivery = {
 }
 
 export function mobileStructuredSendDelivery(
-  result: StructuredAgentSessionMutationCallResult<AgentSessionSendResult>
+  result: StructuredAgentSessionMutationCallResult<AgentSessionSendResult>,
+  statedFailures: readonly AgentSessionFailureFact[] = []
 ): MobileStructuredSendDelivery {
   if (result.status === 'unknown') {
     return { outcome: 'unknown', error: null }
@@ -46,7 +49,9 @@ export function mobileStructuredSendDelivery(
     }
     return {
       outcome: 'rejected',
-      error: structuredAgentSessionRejectionNotice(submission.reason, 'composer-send')
+      error: agentSessionFailureStatedByRow(submission.rejection, statedFailures)
+        ? structuredAgentSessionRejectionNotice(null, 'composer-send')
+        : structuredAgentSessionRejectionNotice(submission.reason, 'composer-send')
     }
   }
   return { outcome: 'accepted', error: null }

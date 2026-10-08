@@ -7,7 +7,7 @@ import { agentSessionFailureWords } from '../../shared/agent-session-failure-wor
 import { BoundedMap } from '../../shared/bounded-map'
 import type { ProviderTimelineEvent } from '../native-chat/agent-session-timeline/provider-timeline-event'
 import type { AcpDialect } from './acp-dialects/acp-dialect'
-import type { AcpAgentError } from './acp-errors'
+import { AcpAgentError, AcpAuthRequiredError } from './acp-errors'
 import { AgentSessionAcquisitionRefusal } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
 
 /** Ends the provider failed, rather than ones it chose (a refusal, a token limit). */
@@ -20,6 +20,13 @@ function acpStopReasonFailed(stopReason: string): boolean {
 /** The provider's words in its error answer to `session/prompt`. */
 export function acpPromptErrorDetail(dialect: AcpDialect, error: AcpAgentError): string {
   return dialect.promptErrorDetail?.(error) ?? error.message
+}
+
+export function acpAuthenticationRequired(dialect: AcpDialect, error: unknown): boolean {
+  return (
+    error instanceof AcpAuthRequiredError ||
+    (error instanceof AcpAgentError && dialect.authenticationRequired?.(error) === true)
+  )
 }
 
 export function acpSignInRequiredRefusal(

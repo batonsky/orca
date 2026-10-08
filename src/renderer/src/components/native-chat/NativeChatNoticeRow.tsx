@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import { NativeChatMarkdown } from './NativeChatMarkdown'
 import { NativeChatCodeBlock } from './NativeChatCodeBlock'
@@ -16,6 +17,9 @@ import { nativeChatOrcaStopRowText } from './native-chat-orca-stop-words'
 import { AGENT_SESSION_ORCA_STOP_PRESENTATION } from '../../../../shared/agent-session-orca-stop'
 import { ProviderFrameRow } from './NativeChatTranscriptChrome'
 import { Button } from '@/components/ui/button'
+import { readWholeAgentSessionFailureFact } from '../../../../shared/agent-session-failure'
+import { agentSessionFailureSentence } from '../../../../shared/agent-session-failure-words'
+import { sayAgentSessionFailureTranslated } from './agent-session-failure-words-text'
 import {
   isClaudeSignInFailureKind,
   nativeChatClaudeSignInLabel,
@@ -37,13 +41,16 @@ const HOST_STATUS_WORDS: Record<AgentSessionHostStatusPresentation, () => string
 
 export function NativeChatNoticeRow({
   block,
+  agentName,
   onLinkClick,
   allowFileUriLinks = false
 }: {
   block: NativeChatTextBlock
+  agentName?: string
   onLinkClick?: CommentMarkdownLinkClickHandler
   allowFileUriLinks?: boolean
 }): React.JSX.Element {
+  useTranslation()
   const orcaStopView = useNativeChatOrcaStopView()
   const claudeSignIn = useNativeChatClaudeSignInView()
   if (block.presentation === 'compaction') {
@@ -103,9 +110,12 @@ export function NativeChatNoticeRow({
   const { orcaStop } = block
   const { hostLabel, continueAvailable } = orcaStopView
   const named = orcaStop !== undefined && hostLabel !== null
+  const failure = readWholeAgentSessionFailureFact(block.failure)
   const text = named
     ? nativeChatOrcaStopRowText(orcaStop.cause, hostLabel, { continueAvailable })
-    : block.text
+    : failure
+      ? agentSessionFailureSentence(failure, 'row', { agentName }, sayAgentSessionFailureTranslated)
+      : block.text
   const tone =
     named || block.presentation === AGENT_SESSION_ORCA_STOP_PRESENTATION ? 'notice' : block.tone
   const Icon =

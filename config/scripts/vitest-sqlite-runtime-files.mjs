@@ -7,6 +7,7 @@ export const SQLITE_RUNTIME_INCLUDE = [
   'src/main/acp/acp-structured-auth.test.ts',
   'src/main/acp/acp-timeline-turn-failures.test.ts',
   'src/main/acp/acp-structured-session-adapter.test.ts',
+  'src/main/pi/rpc-turn-races.test.ts',
   'src/main/active-view-persistence-boundary.test.ts',
   'src/main/automations/automation-dispatch-host-fence.test.ts',
   'src/main/automations/automation-owner-fencing.test.ts',

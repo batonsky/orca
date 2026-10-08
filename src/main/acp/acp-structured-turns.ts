@@ -18,7 +18,7 @@ import {
   type AgentJournalDispatchRejection
 } from '../../shared/agent-session-failure-words'
 import type { AgentJournalItemIdentity } from '../../shared/agent-session-journal-types'
-import { AcpAgentError, AcpAuthRequiredError, AcpConnectionClosedError } from './acp-errors'
+import { AcpAgentError, AcpConnectionClosedError } from './acp-errors'
 import type { AcpStructuredConnection } from './acp-structured-connection'
 import type { AcpStructuredLane } from './acp-structured-lane'
 import type { ContentBlock } from './generated/acp-protocol.generated'
@@ -190,7 +190,7 @@ export class AcpStructuredTurns {
           this.reject(
             send.clientMessageId,
             agentSessionFailureFact(
-              error instanceof AcpAuthRequiredError ? 'notSignedIn' : 'providerRejected',
+              lane.translator.authenticationRequired(error) ? 'notSignedIn' : 'providerRejected',
               detail ? { detail } : {}
             )
           )

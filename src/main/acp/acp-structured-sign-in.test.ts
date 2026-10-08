@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { providerDiagnosticOf } from '../../shared/agent-session-failure'
+import { providerStartupFailureFact } from '../native-chat/agent-session-wire/structured-agent-session-failure-text'
+import { agentSessionFailureSentence } from '../../shared/agent-session-failure-words'
 import { AgentSessionAcquisitionRefusal } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
 import { closeProviderTimelineRigs } from '../native-chat/agent-session-timeline/provider-timeline-assembler-test-support'
 import { ACP_LAUNCH_SPECS } from './acp-launch-specs'
@@ -86,5 +88,38 @@ it.each(ACP_LAUNCH_SPECS)(
     expect(error).toBeInstanceOf(AgentSessionAcquisitionRefusal)
     expect(error).toMatchObject({ reason: 'notSignedIn' })
     expect(providerDiagnosticOf(error)).toEqual({ text: detail, audience: 'person' })
+    const fact = providerStartupFailureFact(error)
+    expect(fact.detail?.text).toBe(detail)
+    expect(agentSessionFailureSentence(fact, 'row', { agentName: spec.agent })).toContain(detail)
   }
 )
+
+it.each([
+  [
+    'No API key found for anthropic.\n\nUse /login, set an API key environment variable, or create /host/agent.db',
+    'notSignedIn'
+  ],
+  ['Rate limit exceeded', undefined],
+  ['Network connection failed', undefined],
+  ['No API key found elsewhere', undefined]
+] as const)('reads OMP internal-error detail without guessing auth: %s', async (detail, kind) => {
+  const spec = ACP_LAUNCH_SPECS.find((entry) => entry.agent === 'omp')
+  if (!spec) {
+    throw new Error('OMP launch specification missing')
+  }
+  const rig = await openAcpAdapterRig({
+    spec,
+    script: (agent) =>
+      agent.on('session/prompt', (frame) =>
+        agent.fail(frame, -32603, 'Internal error', { details: detail })
+      )
+  })
+  await rig.acquire()
+  await sendHello(rig, 'first')
+  await rig.settle()
+  const row = (await rig.rig.rows()).find(
+    ({ body }) => body.kind === 'status' && body.tone === 'error'
+  )
+  expect(row?.body.kind === 'status' ? row.body.failure?.kind : undefined).toBe(kind)
+  expect(row?.body.kind === 'status' ? row.body.text : '').toContain(detail)
+})

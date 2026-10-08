@@ -16,6 +16,7 @@ import type { RpcClient } from '../transport/rpc-client'
 import type { MobileNativeChatSendOutcome } from './mobile-native-chat-send'
 import { dispatchMobileStructuredCommand } from './mobile-structured-composer-command'
 import { sendMobileStructuredAgentSessionMessage } from './mobile-structured-agent-session-send'
+import { agentSessionVisibleFailureFacts } from '../../../src/shared/agent-session-visible-failures'
 import { timeoutForDeadline } from './mobile-structured-agent-session-rpc'
 import {
   pendingStructuredApproval,
@@ -123,7 +124,8 @@ export function useMobileStructuredSendWithOutcome(args: {
           ? { delivery: 'queue-if-active' as const }
           : {}),
         deadline,
-        onError: onSendError
+        onError: onSendError,
+        statedFailures: () => agentSessionVisibleFailureFacts(stateRef.current.items)
       })
     },
     [

@@ -4,13 +4,17 @@ import type { ProviderTimelineEvent } from '../native-chat/agent-session-timelin
 import { acpNotificationEnvelopeSchema, AcpContextTimeline } from './acp-context-usage'
 import { AcpBackgroundTaskTimeline } from './acp-background-task-timeline'
 import { GENERIC_ACP_DIALECT, type AcpDialect } from './acp-dialects/acp-dialect'
-import { AcpAgentError, AcpAuthRequiredError } from './acp-errors'
+import { AcpAgentError } from './acp-errors'
 import { acpTurnEnd, AcpPromptTurns } from './acp-prompt-turns'
 import { readAcpSessionEvent, type AcpSessionEvent } from './acp-session-events'
 import { translateAcpRequest } from './acp-timeline-requests'
 import { acpSessionUpdate } from './acp-session-update'
 import { AcpToolTimeline } from './acp-tool-timeline'
-import { AcpTurnFailures, acpPromptErrorDetail } from './acp-turn-failures'
+import {
+  AcpTurnFailures,
+  acpAuthenticationRequired,
+  acpPromptErrorDetail
+} from './acp-turn-failures'
 import { AcpTurnMessages } from './acp-turn-messages'
 import type { PromptResponse } from './generated/acp-protocol.generated'
 
@@ -88,7 +92,7 @@ export class AcpTimelineTranslator {
     const detail =
       error instanceof AcpAgentError ? acpPromptErrorDetail(this.dialect, error) : undefined
     const ended = this.prompts.last
-    const notSignedIn = error instanceof AcpAuthRequiredError
+    const notSignedIn = this.authenticationRequired(error)
     if (this.prompts.current?.clientMessageId !== clientMessageId) {
       // The provider already ended this turn; its answer may carry the only copy of the reason.
       return ended?.clientMessageId === clientMessageId && this.failures.has(ended.turn)
@@ -96,6 +100,10 @@ export class AcpTimelineTranslator {
         : []
     }
     return this.finishPrompt(clientMessageId, 'error', at, detail, notSignedIn)
+  }
+
+  authenticationRequired(error: unknown): boolean {
+    return acpAuthenticationRequired(this.dialect, error)
   }
 
   /** The agent refused the prompt before its turn began: forgets it and answers the agent's reason.

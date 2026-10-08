@@ -2,9 +2,16 @@
 // The wire carries no hold copy on purpose: the caption is derived here from the
 // draft's own state plus the live facts the client already holds.
 
-import { readWholeAgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
+import {
+  readWholeAgentSessionFailureFact,
+  type AgentSessionFailureFact
+} from '../../../src/shared/agent-session-failure'
+import { agentSessionFailureStatedByRow } from '../../../src/shared/agent-session-visible-failures'
+import {
+  agentSessionWriteNotDoneParts,
+  agentSessionWriteNoticeEnglish
+} from '../../../src/shared/agent-session-refusal-notice'
 import type { AgentJournalSubmission } from '../../../src/shared/agent-session-journal-types'
-import { agentSessionWriteNoticeEnglish } from '../../../src/shared/agent-session-refusal-notice'
 import { dispatchWasWithdrawn } from '../../../src/shared/structured-agent-session-dispatch-rejection'
 import { structuredAgentSessionAttemptFailureParts } from '../../../src/shared/structured-agent-session-rejection-words'
 import {
@@ -34,10 +41,15 @@ function queuedMessageBodyText(body: AgentSessionQueuedMessage['body']): string 
 }
 
 function returnedCaption(
-  draft: Pick<AgentSessionQueuedMessage, 'returnedReason' | 'returnedRejection'>
+  draft: Pick<AgentSessionQueuedMessage, 'returnedReason' | 'returnedRejection'>,
+  agentName?: string,
+  statedFailures: readonly AgentSessionFailureFact[] = []
 ): string {
   const reason = draft.returnedReason ?? null
   const rejection = draft.returnedRejection
+  if (agentSessionFailureStatedByRow(rejection, statedFailures)) {
+    return agentSessionWriteNoticeEnglish(agentSessionWriteNotDoneParts('send'))
+  }
   if (dispatchWasWithdrawn({ dispatchState: 'rejected', reason, rejection })) {
     return 'Stopped before it was sent'
   }
@@ -46,7 +58,7 @@ function returnedCaption(
   return agentSessionWriteNoticeEnglish(
     structuredAgentSessionAttemptFailureParts(
       { kind: 'rejected', reason },
-      { retryControl: true },
+      { agentName, retryControl: true },
       readWholeAgentSessionFailureFact(rejection)
     )
   )
@@ -93,7 +105,12 @@ export function mobileQueuePauseLabel(pause: Pick<AgentSessionQueuePause, 'reaso
 export function mobileQueuedMessageCards(
   queuedMessages: readonly AgentSessionQueuedMessage[] | null,
   submissions: readonly Pick<AgentJournalSubmission, 'queuedMessageId' | 'dispatchState'>[],
-  facts: { pendingPrompt: boolean; queuePaused?: boolean }
+  facts: {
+    pendingPrompt: boolean
+    queuePaused?: boolean
+    agentName?: string
+    statedFailures?: readonly AgentSessionFailureFact[]
+  }
 ): MobileQueuedMessageCard[] {
   if (!queuedMessages || queuedMessages.length === 0) {
     return []
@@ -114,7 +131,7 @@ export function mobileQueuedMessageCards(
     const paused = draft.paused === true
     const caption =
       draft.state === 'returned'
-        ? returnedCaption(draft)
+        ? returnedCaption(draft, facts.agentName, facts.statedFailures)
         : paused
           ? pausedCaption(draft.pausedReason)
           : behindReturned

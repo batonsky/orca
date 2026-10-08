@@ -16,11 +16,11 @@ function failedStartReason(items: readonly AgentJournalRenderItem[] | undefined)
   for (const item of items ?? []) {
     if (item.body.kind === 'turn') {
       reason = null
-    } else if (
-      item.body.kind === 'status' &&
-      isStructuredAgentSessionStartFailureRow(item.itemId)
-    ) {
-      reason = readAgentSessionFailureFact(item.body.failure)?.kind ?? null
+    } else if (item.body.kind === 'status') {
+      const failure = readAgentSessionFailureFact(item.body.failure)
+      if (isStructuredAgentSessionStartFailureRow(item.itemId) || failure?.kind === 'notSignedIn') {
+        reason = failure?.kind ?? null
+      }
     }
   }
   return reason

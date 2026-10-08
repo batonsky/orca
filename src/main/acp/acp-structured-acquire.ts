@@ -21,8 +21,8 @@ import {
   PROVIDER_SPAWN_TOKEN_ENV
 } from '../provider-process/provider-spawned-process-identity'
 import { structuredSessionChildIdentityEnv } from '../runtime/structured-session-child-identity-env'
-import { AcpAuthRequiredError } from './acp-errors'
-import { acpSignInRequiredRefusal } from './acp-turn-failures'
+import { AcpAgentError } from './acp-errors'
+import { acpAuthenticationRequired, acpSignInRequiredRefusal } from './acp-turn-failures'
 import { ACP_CHILD_ENV_TO_DELETE } from './acp-launch-specs'
 import {
   ACP_REOPEN_FAILED,
@@ -319,7 +319,7 @@ export async function acquireAcpStructuredSession(input: {
   } catch (error) {
     session = null
     slot.lane?.dispose()
-    if (error instanceof AcpAuthRequiredError) {
+    if (error instanceof AcpAgentError && acpAuthenticationRequired(spec.dialect, error)) {
       throw acpSignInRequiredRefusal(spec.agent, spec.dialect, error)
     }
     throw error
