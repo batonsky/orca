@@ -1,3 +1,4 @@
+import type { AgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
 // The structured composer's one send seam: a slash command dispatches as a
 // conversation command, and everything else goes out as an
 // `agentSession.send` — carrying `delivery: 'queue-if-active'` only when the
@@ -16,7 +17,6 @@ import type { RpcClient } from '../transport/rpc-client'
 import type { MobileNativeChatSendOutcome } from './mobile-native-chat-send'
 import { dispatchMobileStructuredCommand } from './mobile-structured-composer-command'
 import { sendMobileStructuredAgentSessionMessage } from './mobile-structured-agent-session-send'
-import { agentSessionVisibleFailureFacts } from '../../../src/shared/agent-session-visible-failures'
 import { timeoutForDeadline } from './mobile-structured-agent-session-rpc'
 import {
   pendingStructuredApproval,
@@ -48,7 +48,7 @@ export function useMobileStructuredSendWithOutcome(args: {
     StructuredAgentSessionComposerOptions,
     'snapshot' | 'setOption' | 'invokeAction' | 'conversationCommands'
   >
-  onSendError: (message: string) => void
+  onSendError: (message: string, failure?: AgentSessionFailureFact) => void
 }): (
   text: string,
   images?: string[],
@@ -124,8 +124,7 @@ export function useMobileStructuredSendWithOutcome(args: {
           ? { delivery: 'queue-if-active' as const }
           : {}),
         deadline,
-        onError: onSendError,
-        statedFailures: () => agentSessionVisibleFailureFacts(stateRef.current.items)
+        onError: onSendError
       })
     },
     [

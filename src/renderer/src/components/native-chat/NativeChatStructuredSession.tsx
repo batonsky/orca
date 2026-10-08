@@ -49,6 +49,7 @@ import { useNativeChatStructuredComposerTransport } from './use-native-chat-stru
 import { NativeChatThreadGoalBanner } from './NativeChatThreadGoalBanner'
 import { structuredAgentSessionReadFailureNotice } from './structured-agent-session-read-failure-notice'
 import { useStructuredAgentSessionDeliveryNotices } from './use-structured-agent-session-delivery-notices'
+import { dispatchWasWithdrawn } from '../../../../shared/structured-agent-session-dispatch-rejection'
 import { useNativeChatHostOutage } from './use-native-chat-host-outage'
 import { useNativeChatHostOutageNotice } from './use-native-chat-host-outage-notice'
 import { useNativeChatAvailabilityNotice } from './use-native-chat-availability-notice'
@@ -136,11 +137,21 @@ export function NativeChatStructuredSession(
     isWorking: controller.isWorking,
     composer: { clearError: () => reportComposerError(null) }
   })
-  const startFailures = useStructuredAgentSessionStartFailureFacts(controller.journalItems, true)
+  const needsFailureFacts =
+    props.agent === 'claude' ||
+    submits.queuedMessages.cards.some((card) => card.state === 'returned') ||
+    controller.submissions.some(
+      (submission) => submission.dispatchState === 'rejected' && !dispatchWasWithdrawn(submission)
+    )
+  const startFailures = useStructuredAgentSessionStartFailureFacts(
+    controller.journalItems,
+    needsFailureFacts
+  )
   const deliveryNotices = useStructuredAgentSessionDeliveryNotices({
     pending: controller.pending,
     submissions: controller.submissions,
     journalItems: controller.journalItems,
+    startFailures,
     agentName: agentLabel
   })
   // Nothing reads an unread history, so its pane stays blank beside the Retry line.

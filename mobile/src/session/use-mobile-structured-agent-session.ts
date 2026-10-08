@@ -1,3 +1,4 @@
+import type { AgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
 import { useCallback, useMemo, useRef } from 'react'
 import { encodeNativeChatTranscriptIdentity } from '../../../src/shared/native-chat-transcript-retention'
 import type { MobileNativeChatSendOutcome } from './mobile-native-chat-send'
@@ -90,7 +91,7 @@ export function useMobileStructuredAgentSession(args: {
   agent: string | null
   /** The active pane's live composer; Edit copies a card's text through it. */
   appendComposerText?: (text: string) => boolean
-  onSendError: (message: string) => void
+  onSendError: (message: string, failure?: AgentSessionFailureFact) => void
   /** Called on any accepted queued-card action; retires the route's failure banner. */
   onActionResolved?: () => void
 }): StructuredMobileSession {

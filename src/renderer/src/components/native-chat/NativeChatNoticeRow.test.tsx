@@ -133,6 +133,19 @@ describe('the row an Orca stop leaves', () => {
 })
 
 describe('notice rows', () => {
+  it.each(['providerStartFailed', 'notSignedIn'] as const)(
+    'keeps the host /compact retry instruction for %s',
+    (kind) => {
+      const words = agentSessionFailureWords(
+        { kind },
+        { agentName: 'Grok', command: 'compact', surface: 'row' }
+      )
+      renderStatus({ kind: 'status', tone: 'error', ...words }, null, false, 'Grok')
+      expect(screen.getByText(words.text)).toBeInTheDocument()
+      expect(screen.getByText(/Run \/compact again\./)).toBeInTheDocument()
+      expect(screen.queryByText(/send your message again/i)).toBeNull()
+    }
+  )
   it('updates a mounted auth row when the reader changes language', async () => {
     renderStatus(
       {

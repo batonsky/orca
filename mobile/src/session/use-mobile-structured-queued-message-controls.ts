@@ -80,7 +80,9 @@ export function useMobileStructuredQueuedMessageControls(args: {
       mobileQueuedMessageCards(queuedMessages, submissions, {
         pendingPrompt,
         agentName: args.agentName,
-        statedFailures: agentSessionVisibleFailureFacts(args.journalItems ?? []),
+        statedFailures: queuedMessages?.some((draft) => draft.state === 'returned')
+          ? agentSessionVisibleFailureFacts(args.journalItems ?? [])
+          : [],
         queuePaused: queuePause !== null
       }),
     [args.agentName, args.journalItems, pendingPrompt, queuePause, queuedMessages, submissions]

@@ -111,9 +111,11 @@ export function NativeChatNoticeRow({
   const { hostLabel, continueAvailable } = orcaStopView
   const named = orcaStop !== undefined && hostLabel !== null
   const failure = readWholeAgentSessionFailureFact(block.failure)
+  // Only reword auth text fully described by its fact; host text may also carry command advice.
   const text = named
     ? nativeChatOrcaStopRowText(orcaStop.cause, hostLabel, { continueAvailable })
-    : failure
+    : failure?.kind === 'notSignedIn' &&
+        block.text === agentSessionFailureSentence(failure, 'row', { agentName })
       ? agentSessionFailureSentence(failure, 'row', { agentName }, sayAgentSessionFailureTranslated)
       : block.text
   const tone =

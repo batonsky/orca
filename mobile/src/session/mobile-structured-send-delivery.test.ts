@@ -14,7 +14,7 @@ function accepted(
 }
 
 describe('mobileStructuredSendDelivery', () => {
-  it('states delivery once the transcript already explains the same auth failure', () => {
+  it('keeps the typed auth fact beside guidance until the transcript can explain it', () => {
     const result = structuredSendResultFixture('rejected', 'Sign in to Grok with `grok login`.')
     if (!('submission' in result)) {
       throw new Error('expected submission')
@@ -24,15 +24,15 @@ describe('mobileStructuredSendDelivery', () => {
       detail: { text: 'Key expired.', audience: 'person' as const }
     }
     result.submission.rejection = fact
-    expect(mobileStructuredSendDelivery({ status: 'accepted', value: result }, [fact])).toEqual({
+    expect(mobileStructuredSendDelivery({ status: 'accepted', value: result })).toEqual({
       outcome: 'rejected',
-      error: 'Your message was not sent.'
+      error: 'Sign in to Grok with `grok login`.',
+      failure: fact
     })
-    expect(
-      mobileStructuredSendDelivery({ status: 'accepted', value: result }, [
-        { kind: 'notSignedIn', account: 'managed' }
-      ]).error
-    ).toContain('Sign in')
+    result.submission.rejection = { kind: 'providerRejected' }
+    expect(mobileStructuredSendDelivery({ status: 'accepted', value: result }).error).toContain(
+      'Sign in'
+    )
   })
   it('reports transport and host uncertainty on this send', () => {
     expect(mobileStructuredSendDelivery({ status: 'unknown' })).toEqual({

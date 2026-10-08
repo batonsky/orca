@@ -1,3 +1,4 @@
+import type { AgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
 import { useLayoutEffect, useRef, type MutableRefObject } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState } from '../transport/types'
@@ -40,7 +41,7 @@ export function useMobileNativeChatController(args: {
   connState: ConnectionState
   /** Host capability fact from the shared runtime status probe. */
   agentSessionHostSupport?: StructuredAgentSessionHostSupport | null
-  onSendError: (message: string) => void
+  onSendError: (message: string, failure?: AgentSessionFailureFact) => void
   /** Retires a held failure banner. Any accepted chat write clears it — a delivered
    *  answer or permission reply must not sit under a stale "not sent". */
   onSendResolved: () => void

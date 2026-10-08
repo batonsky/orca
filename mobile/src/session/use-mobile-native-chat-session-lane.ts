@@ -1,3 +1,4 @@
+import type { AgentSessionFailureFact } from '../../../src/shared/agent-session-failure'
 import { useCallback } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState } from '../transport/types'
@@ -38,7 +39,7 @@ export function useMobileNativeChatSessionLane({
   appendComposerTextRef: { readonly current: (text: string) => boolean }
   enabled: boolean
   connState: ConnectionState
-  onSendError: (message: string) => void
+  onSendError: (message: string, failure?: AgentSessionFailureFact) => void
   /** Called on any accepted queued-card action; retires the route's failure banner. */
   onActionResolved?: () => void
 }): {

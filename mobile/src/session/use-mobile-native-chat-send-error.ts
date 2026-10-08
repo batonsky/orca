@@ -1,7 +1,33 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
+import {
+  readWholeAgentSessionFailureFact,
+  type AgentSessionFailureFact
+} from '../../../src/shared/agent-session-failure'
+import { sameAgentSessionFailureFact } from '../../../src/shared/agent-session-visible-failures'
+import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
+import { structuredAgentSessionRejectionNotice } from '../../../src/shared/structured-agent-session-rejection-words'
 
 const NATIVE_CHAT_SEND_ERROR_HOLD_MS = 4000
 const NATIVE_CHAT_SEND_ERROR_TOAST_MS = 1600
+
+/** A held rejection keeps its guidance until the current transcript states the same failure. */
+export function mobileNativeChatSendErrorMessage(
+  error: { message: string | null; failure?: AgentSessionFailureFact },
+  messages: readonly NativeChatMessage[]
+): string | null {
+  const { failure, message } = error
+  if (!message || !failure) {
+    return message
+  }
+  const stated = messages.some((row) =>
+    row.blocks.some((block) => {
+      const fact =
+        block.type === 'text' ? readWholeAgentSessionFailureFact(block.failure) : undefined
+      return fact !== undefined && sameAgentSessionFailureFact(failure, fact)
+    })
+  )
+  return stated ? structuredAgentSessionRejectionNotice(null, 'composer-send') : message
+}
 
 /** Holds the newest native-chat send failure for the composer's inline banner.
  *  Why a banner and not the bottom toast: chat failures happen with the keyboard
@@ -13,12 +39,21 @@ export function useMobileNativeChatSendError(args: {
   showToast: (message: string, durationMs?: number) => void
 }): {
   message: string | null
-  show: (message: string) => void
+  failure?: AgentSessionFailureFact
+  show: (message: string, failure?: AgentSessionFailureFact) => void
   clear: () => void
   /** Set by the route each render; gates banner vs toast. */
   bannerMountedRef: MutableRefObject<boolean>
 } {
-  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<{
+    scopeKey: string | null
+    message: string
+    failure?: AgentSessionFailureFact
+  } | null>(null)
+  if (error && error.scopeKey !== args.scopeKey) {
+    setError(null)
+  }
+  const visibleError = error?.scopeKey === args.scopeKey ? error : null
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bannerMountedRef = useRef(false)
   const showToastRef = useRef(args.showToast)
@@ -41,10 +76,10 @@ export function useMobileNativeChatSendError(args: {
       return
     }
     clearTimer()
-    setMessage(null)
+    setError(null)
   }, [clearTimer, scopeKey])
   const show = useCallback(
-    (next: string) => {
+    (next: string, failure?: AgentSessionFailureFact) => {
       // Why: deferred failures can land after the user left chat (banner unmounted)
       // or moved to another tab, where the banner belongs to a different terminal —
       // both must fall back to the toast instead of being swallowed or misattributed.
@@ -53,18 +88,17 @@ export function useMobileNativeChatSendError(args: {
         return
       }
       clearTimer()
-      setMessage(next)
+      setError({ scopeKey, message: next, ...(failure ? { failure } : {}) })
       timerRef.current = setTimeout(() => {
         timerRef.current = null
-        setMessage(null)
+        setError(null)
       }, NATIVE_CHAT_SEND_ERROR_HOLD_MS)
     },
     [clearTimer, scopeKey]
   )
-  // A held failure describes the scope it was raised on; drop it when that changes.
+  // A scope change retires its timer; rendering already discards its held failure.
   useEffect(() => {
     clearTimer()
-    setMessage(null)
   }, [clearTimer, scopeKey])
   useEffect(
     () => () => {
@@ -76,5 +110,11 @@ export function useMobileNativeChatSendError(args: {
     },
     [clearTimer]
   )
-  return { message, show, clear, bannerMountedRef }
+  return {
+    message: visibleError?.message ?? null,
+    ...(visibleError?.failure ? { failure: visibleError.failure } : {}),
+    show,
+    clear,
+    bannerMountedRef
+  }
 }
