@@ -83,9 +83,15 @@ function makeSession(): WorkspaceSessionState {
   }
 }
 
+class TitlePersistenceRuntime extends OrcaRuntimeService {
+  titleProvisioningHost() {
+    return this.getWorktreeTerminalProvisioningHost()
+  }
+}
+
 function createRuntime(initialSession: WorkspaceSessionState) {
   let session = initialSession
-  const runtime = new OrcaRuntimeService({
+  const runtime = new TitlePersistenceRuntime({
     ...storeBase,
     getWorkspaceSession: () => session,
     setWorkspaceSession: (next: WorkspaceSessionState) => {
@@ -174,6 +180,22 @@ describe('remote Web terminal custom title persistence', () => {
     expect(visibleTitle(applySnapshot(renamed, legacySnapshot, 'new-client-old-host'))).toBe(
       'Local rename'
     )
+  })
+
+  it('publishes a provisioned title immediately and preserves it through restart', async () => {
+    const host = createRuntime(makeSession())
+    await host.runtime.listMobileSessionTabs(`id:${WORKTREE_ID}`)
+    const { terminals } = await host.runtime.listTerminals(`id:${WORKTREE_ID}`)
+    const terminal = terminals.find((item) => item.ptyId === PTY_ID)
+    if (!terminal) throw new Error('Registered title-test terminal is missing')
+    await host.runtime.titleProvisioningHost().setTabTitle(terminal.handle, 'Dev')
+    const live = await host.runtime.listMobileSessionTabs(`id:${WORKTREE_ID}`)
+    expect(live.tabs).toContainEqual(expect.objectContaining({ customTitle: 'Dev', title: 'Dev' }))
+    expect(visibleTitle(applySnapshot(makeViewerState(), live, 'provisioned-client'))).toBe('Dev')
+    expect(host.getSession().tabsByWorktree[WORKTREE_ID]?.[0]?.customTitle).toBe('Dev')
+    const restarted = createRuntime(structuredClone(host.getSession()))
+    const cold = await restarted.runtime.listMobileSessionTabs(`id:${WORKTREE_ID}`)
+    expect(cold.tabs).toContainEqual(expect.objectContaining({ customTitle: 'Dev', title: 'Dev' }))
   })
 
   it('fans out to two clients and survives refresh plus host restart', async () => {
