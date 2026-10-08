@@ -187,7 +187,9 @@ describe('remote Web terminal custom title persistence', () => {
     await host.runtime.listMobileSessionTabs(`id:${WORKTREE_ID}`)
     const { terminals } = await host.runtime.listTerminals(`id:${WORKTREE_ID}`)
     const terminal = terminals.find((item) => item.ptyId === PTY_ID)
-    if (!terminal) throw new Error('Registered title-test terminal is missing')
+    if (!terminal) {
+      throw new Error('Registered title-test terminal is missing')
+    }
     await host.runtime.titleProvisioningHost().setTabTitle(terminal.handle, 'Dev')
     const live = await host.runtime.listMobileSessionTabs(`id:${WORKTREE_ID}`)
     expect(live.tabs).toContainEqual(expect.objectContaining({ customTitle: 'Dev', title: 'Dev' }))
