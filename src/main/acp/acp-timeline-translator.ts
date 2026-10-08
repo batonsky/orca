@@ -4,7 +4,7 @@ import type { ProviderTimelineEvent } from '../native-chat/agent-session-timelin
 import { acpNotificationEnvelopeSchema, AcpContextTimeline } from './acp-context-usage'
 import { AcpBackgroundTaskTimeline } from './acp-background-task-timeline'
 import { GENERIC_ACP_DIALECT, type AcpDialect } from './acp-dialects/acp-dialect'
-import { AcpAgentError } from './acp-errors'
+import { AcpAgentError, AcpAuthRequiredError } from './acp-errors'
 import { acpTurnEnd, AcpPromptTurns } from './acp-prompt-turns'
 import { readAcpSessionEvent, type AcpSessionEvent } from './acp-session-events'
 import { translateAcpRequest } from './acp-timeline-requests'
@@ -88,13 +88,14 @@ export class AcpTimelineTranslator {
     const detail =
       error instanceof AcpAgentError ? acpPromptErrorDetail(this.dialect, error) : undefined
     const ended = this.prompts.last
+    const notSignedIn = error instanceof AcpAuthRequiredError
     if (this.prompts.current?.clientMessageId !== clientMessageId) {
       // The provider already ended this turn; its answer may carry the only copy of the reason.
       return ended?.clientMessageId === clientMessageId && this.failures.has(ended.turn)
-        ? this.failures.row(ended.turn, detail)
+        ? this.failures.row(ended.turn, detail, 'error', notSignedIn)
         : []
     }
-    return this.finishPrompt(clientMessageId, 'error', at, detail)
+    return this.finishPrompt(clientMessageId, 'error', at, detail, notSignedIn)
   }
 
   /** The agent refused the prompt before its turn began: forgets it and answers the agent's reason.
@@ -107,14 +108,17 @@ export class AcpTimelineTranslator {
     clientMessageId: string,
     stopReason: string,
     at: number,
-    failureDetail?: string
+    failureDetail?: string,
+    notSignedIn = false
   ): ProviderTimelineEvent[] {
     const prompt = this.prompts.current
     if (prompt?.clientMessageId !== clientMessageId) {
       return []
     }
     const events = this.start(prompt.turn, at)
-    events.push(...this.endTurn(prompt.turn, stopReason, at, prompt.durationMs, failureDetail))
+    events.push(
+      ...this.endTurn(prompt.turn, stopReason, at, prompt.durationMs, failureDetail, notSignedIn)
+    )
     return events
   }
 
@@ -235,9 +239,10 @@ export class AcpTimelineTranslator {
     stopReason: string,
     at: number,
     durationMs: number | undefined,
-    failureDetail: string | undefined
+    failureDetail: string | undefined,
+    notSignedIn = false
   ): ProviderTimelineEvent[] {
-    const events = this.failures.ended(turn, stopReason, failureDetail)
+    const events = this.failures.ended(turn, stopReason, failureDetail, notSignedIn)
     events.push(acpTurnEnd(turn, stopReason, at, durationMs))
     this.end(turn)
     if (this.prompts.current?.turn === turn) {

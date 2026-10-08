@@ -5,11 +5,32 @@ import {
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeStreamJsonConnection } from './claude-stream-json-connection'
 import type { ClaudeJournalTranslator } from './claude-journal-translator-contract'
+import type { AgentSessionAccountKind } from '../../shared/agent-session-availability'
+import type { ClaudePromptRegistry } from './claude-structured-prompt-replies'
+import { createClaudeJournalTranslator } from './claude-structured-journal-translation'
 import type { ClaudeInitProof } from './claude-structured-session-startup'
 import type {
   ClaudeAcquisitionAttempt,
   ClaudeAcquireCallbacks
 } from './claude-structured-session-state'
+
+export function createClaudeSessionJournalTranslator(
+  sink: StructuredAgentSessionEventSink | undefined,
+  prompts: ClaudePromptRegistry,
+  fallbackIdPrefix: string,
+  onBackgroundTaskJournalFailure?: (error: Error) => void,
+  account?: () => AgentSessionAccountKind | undefined
+): ClaudeJournalTranslator | null {
+  return sink
+    ? createClaudeJournalTranslator({
+        sink,
+        account,
+        fallbackIdPrefix,
+        ...(onBackgroundTaskJournalFailure ? { onBackgroundTaskJournalFailure } : {}),
+        bindPromptItemId: (itemId, promptKey) => prompts.bindJournalItemId(itemId, promptKey)
+      })
+    : null
+}
 
 export function createClaudeJournalFailureHandler(input: {
   attempt: ClaudeAcquisitionAttempt

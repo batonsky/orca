@@ -43,6 +43,8 @@ const NOTICE_PIECES: readonly AgentSessionFailureCopyId[] = [
 const JAPANESE_ONLY = /[\u3040-\u30ff続読変済図気帰戻検択転権単圧応対発処実証覧関専]/u
 const VALUES = {
   agent: 'Claude',
+  loginCommand: 'agent login',
+  slashCommand: '/login',
   command: 'compact',
   detail: 'Image type .bmp',
   limit: '20',
@@ -141,7 +143,7 @@ describe('desktop words for a failure fact', () => {
         agentSessionWriteNoticeParts(refused, 'send', { agentName: 'Claude' })
       )
     ).toBe(
-      "Votre message n'a pas été envoyé. Claude n’est pas connecté. Exécutez `claude` et connectez-vous avec /login, ou choisissez un compte dans les paramètres des Comptes Claude."
+      "Votre message n'a pas été envoyé. Claude n’est pas connecté. Exécutez `claude auth login`, ou choisissez un compte dans les paramètres des Comptes Claude."
     )
     const detail = 'Uses {{agent}} $t(components.native-chat.failureWords.theAgent) <b>&</b>'
     const rejected = structuredAgentSessionRejectionParts(

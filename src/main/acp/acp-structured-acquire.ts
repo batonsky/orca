@@ -11,7 +11,6 @@ import type { AgentSessionProviderHandleLink } from '../../shared/agent-session-
 import { TUI_AGENT_DISPLAY_NAMES } from '../../shared/tui-agent-display-names'
 import { isTuiAgent } from '../../shared/tui-agent-config'
 import {
-  AgentSessionAcquisitionRefusal,
   AgentSessionPreSpawnError,
   type AgentSessionAcquisition,
   type StructuredAgentSessionAcquireInput
@@ -23,6 +22,7 @@ import {
 } from '../provider-process/provider-spawned-process-identity'
 import { structuredSessionChildIdentityEnv } from '../runtime/structured-session-child-identity-env'
 import { AcpAuthRequiredError } from './acp-errors'
+import { acpSignInRequiredRefusal } from './acp-turn-failures'
 import { ACP_CHILD_ENV_TO_DELETE } from './acp-launch-specs'
 import {
   ACP_REOPEN_FAILED,
@@ -320,10 +320,7 @@ export async function acquireAcpStructuredSession(input: {
     session = null
     slot.lane?.dispose()
     if (error instanceof AcpAuthRequiredError) {
-      throw new AgentSessionAcquisitionRefusal(
-        `${spec.agent} reported that it is not signed in: ${error.message}`,
-        'notSignedIn'
-      )
+      throw acpSignInRequiredRefusal(spec.agent, spec.dialect, error)
     }
     throw error
   }

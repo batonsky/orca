@@ -18,6 +18,7 @@ import { openCodeStoredUserMessagesReader } from '../opencode/opencode-acp-store
 import type { AcpStoredUserMessagesReader } from './acp-recovery-history'
 import { isStableCliVersionFrom, isStableCliVersionOnLine } from '../agent-cli-version-probe'
 import type { TuiAgent } from '../../shared/tui-agent'
+import { agentSessionSignInFor } from '../../shared/agent-session-sign-in'
 
 export type AcpLaunchSpec = {
   /** The Orca agent id, which names the agent's records, its catalog label and its settings. */
@@ -59,7 +60,7 @@ const GROK_LAUNCH_SPEC: AcpLaunchSpec = {
   args: ({ fullAccess }) => ['agent', ...(fullAccess ? ['--always-approve'] : []), 'stdio'],
   env: {},
   dialect: GROK_ACP_DIALECT,
-  loginCommand: ['grok', 'login'],
+  loginCommand: agentSessionSignInFor('grok')?.loginCommand ?? [],
   // An API key in Grok's own environment, else the sign-in Grok already cached; never interactive.
   authMethod: ({ advertised, env }) =>
     env.XAI_API_KEY?.trim() && advertised.includes('xai.api_key')
@@ -90,7 +91,7 @@ const OPENCODE_LAUNCH_SPEC: AcpLaunchSpec = {
   env: { OPENCODE_CLIENT: 'acp', OPENCODE_ENABLE_QUESTION_TOOL: 'false' },
   scrubEnvironment: scrubOpenCodeAcpEnvironment,
   dialect: OPENCODE_ACP_DIALECT,
-  loginCommand: ['opencode', 'auth', 'login'],
+  loginCommand: agentSessionSignInFor('opencode')?.loginCommand ?? [],
   account: openCodeAcpAccountBinding(),
   installDirectories: ({ homePath }) => [join(homePath, '.opencode', 'bin')],
   supportsVersion: (version) =>
@@ -107,8 +108,7 @@ const OMP_LAUNCH_SPEC: AcpLaunchSpec = {
   args: () => ['acp'],
   env: {},
   dialect: OMP_ACP_DIALECT,
-  // OMP signs in from its own `/login`.
-  loginCommand: ['omp'],
+  loginCommand: agentSessionSignInFor('omp')?.loginCommand ?? [],
   // The directory OMP's terminal chats read too; its default is OMP's own.
   account: directoryAccountBinding('PI_CODING_AGENT_DIR', (homePath) =>
     join(homePath, '.omp', 'agent')

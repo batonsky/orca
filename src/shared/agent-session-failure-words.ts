@@ -206,7 +206,7 @@ const FAILURE_SENTENCES = {
   providerStartFailed: (context, _fact, _surface, say) =>
     joinSentences([say('providerStartFailed', agent(say, context)), ...startRetry(say, context)]),
   startFailed: couldNot('couldNotStart'),
-  notSignedIn: (context, fact, _surface, say) => notSignedInSentence(context, fact, say),
+  notSignedIn: (context, fact, surface, say) => notSignedInSentence(context, fact, say, surface),
   cliMissing: (context, _fact, _surface, say) => cliMissingSentence(context, say),
   historyTooLarge: (_context, _fact, _surface, say) =>
     joinSentences([say('historyTooLarge'), say('startNewChat')]),
