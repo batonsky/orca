@@ -33,7 +33,7 @@ jobs:
           cat red.log
           git restore --source=HEAD -- src/main/ipc/pty/ipc/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
           test "$result" -ne 0
-          rg 'AssertionError' red.log
+          node -e "const s=require('fs').readFileSync('red.log','utf8'); if(!s.includes('AssertionError') || /Failed to load|Cannot find module|ReferenceError/.test(s)) process.exit(1)"
       - name: Verify fix and related contracts
         run: |
           node config/scripts/run-vitest.mjs run --config config/vitest.config.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-canonical-rows.test.ts src/main/agent-hooks/server-pane-authority.test.ts src/renderer/src/store/slices/agent-pane-authority.test.ts src/main/ipc/pty/ipc/spawn-commit-run-facts.test.ts

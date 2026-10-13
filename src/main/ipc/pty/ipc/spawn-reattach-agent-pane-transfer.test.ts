@@ -92,7 +92,9 @@ describe('reattach commit preserves agent status ownership', () => {
   })
 
   it('does not move a row when the binding save fails', async () => {
-    await expect(commit({ failSave: true })).rejects.toThrow('disk full')
+    await expect(commit({ failSave: true })).rejects.toThrow(
+      'ORCA_TERMINAL_SESSION_STATE_SAVE_FAILED'
+    )
     expect(agentHookServer.getStatusSnapshot()).toEqual([
       expect.objectContaining({ paneKey: SOURCE })
     ])
