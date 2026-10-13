@@ -20,11 +20,14 @@ export function prepareReattachedAgentPaneTransfer(args: {
     !result.incarnationId ||
     !worktreeId ||
     !owner
-  )
+  ) {
     return () => {}
+  }
   const session = store.getWorkspaceSession()
   const tab = session.tabsByWorktree[worktreeId]?.find((tab) => tab.id === owner.tabId)
-  if (!tab) return () => {}
+  if (!tab) {
+    return () => {}
+  }
   const transfers = resolveTerminalCanonicalPaneTransfers(
     {
       ...session,

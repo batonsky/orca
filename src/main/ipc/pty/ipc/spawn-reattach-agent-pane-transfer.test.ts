@@ -70,7 +70,9 @@ async function commit(
     worktreeId: 'wt-1',
     payload: { state: 'done', prompt: 'completed conversation', agentType: 'codex' }
   })
-  if (entryPoint === 'renderer') return commitPtyIpcSpawn(ctx)
+  if (entryPoint === 'renderer') {
+    return commitPtyIpcSpawn(ctx)
+  }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the runtime commit reads the same persistence and notification ports; no provider is launched.
   const runtimeDeps = ports as unknown as PtyRuntimeControllerDeps
   const runtimeCtx = createRuntimePtySpawnState(runtimeDeps, {
@@ -85,7 +87,9 @@ async function commit(
   runtimeCtx.metadataLeafId = TARGET_LEAF
   runtimeCtx.env = { ORCA_PANE_KEY: TARGET }
   runtimeCtx.result = ctx.result
-  if (!runtimeDeps.store) throw new Error('missing test store')
+  if (!runtimeDeps.store) {
+    throw new Error('missing test store')
+  }
   runtimeCtx.hostSessionBinding = {
     store: runtimeDeps.store,
     worktreeId: 'wt-1',

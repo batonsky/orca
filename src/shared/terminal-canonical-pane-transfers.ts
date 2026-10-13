@@ -12,9 +12,12 @@ export type TerminalCanonicalPaneTransfer = {
 function mountedBindings(layout: TerminalLayoutSnapshot | undefined): [string, string][] {
   const leaves = new Set<string>()
   const visit = (node: TerminalLayoutSnapshot['root']): void => {
-    if (!node) return
-    if (node.type === 'leaf') leaves.add(node.leafId)
-    else {
+    if (!node) {
+      return
+    }
+    if (node.type === 'leaf') {
+      leaves.add(node.leafId)
+    } else {
       visit(node.first)
       visit(node.second)
     }
@@ -45,7 +48,9 @@ export function resolveTerminalCanonicalPaneTransfers(
     for (const tab of session.tabsByWorktree[worktreeId] ?? []) {
       for (const [leafId, ptyId] of mountedBindings(session.terminalLayoutsByTabId[tab.id])) {
         const destinations = owners.get(ptyId)
-        if (destinations?.length !== 1) continue
+        if (destinations?.length !== 1) {
+          continue
+        }
         const fromPaneKey = makePaneKey(tab.id, leafId)
         const toPaneKey = destinations[0]!
         const incarnationId = session.terminalPtyIncarnationsByPaneKey?.[fromPaneKey]
