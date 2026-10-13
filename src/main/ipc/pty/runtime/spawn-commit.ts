@@ -33,6 +33,7 @@ import { admitProviderReattachLaunchIdentity } from '../pane/launch-authority'
 import { spawnCommitBindingOrigin } from '../../../persistence/loading-store/pty-binding-span'
 import type { RuntimePtySpawnState } from './spawn-state'
 import { commitPtyWithOpenCodePromptIntent } from '../../../opencode/opencode-startup-prompt-owner'
+import { prepareReattachedAgentPaneTransfer } from '../pane/reattached-agent-pane-transfer'
 import {
   admitPtyReattachOwnership,
   discardUnpersistedPtySpawn,
@@ -45,6 +46,12 @@ export async function commitRuntimePtySpawn(ctx: RuntimePtySpawnState) {
 
 async function commitReservedRuntimePtySpawn(ctx: RuntimePtySpawnState) {
   const args = ctx.args
+  const transferReattachedAgentPane = prepareReattachedAgentPaneTransfer({
+    store: ctx.hostSessionBinding?.store ?? ctx.deps.store,
+    result: ctx.result,
+    worktreeId: args.worktreeId,
+    paneKey: ctx.spawnIdentityPaneKey
+  })
   admitPtyReattachOwnership(ctx.deps.runtime, ctx.result)
   const providerReattachLaunchIdentity = admitProviderReattachLaunchIdentity(ctx.result)
   if (
@@ -197,6 +204,7 @@ async function commitReservedRuntimePtySpawn(ctx: RuntimePtySpawnState) {
   }
   // Why after registration: a spawn discarded for a failed save or rejected for exiting during
   // start must not record facts or end a stop.
+  transferReattachedAgentPane()
   ctx.deps.runtime?.noteTerminalSpawnCommit?.(
     ctx.result,
     ctx.hostSessionBinding?.expectedSourceBinding

@@ -24,6 +24,10 @@ import { buildWorkspaceTerminalReconnectPlan } from './workspace-terminal-reconn
 import { buildWorkspaceTerminalLayoutPlan } from './workspace-terminal-layout-plan'
 import { addHydratedSshWorktreePlaceholders } from './workspace-terminal-ssh-placeholders'
 import { retainUnverifiedPtyLossTabIds } from './terminal-unverified-pty-loss'
+import {
+  resolveTerminalCanonicalPaneTransfers,
+  type TerminalCanonicalPaneTransfer
+} from '../../../../shared/terminal-canonical-pane-transfers'
 
 export function createWorkspaceTerminalHydrationActions(
   set: TerminalStoreSet,
@@ -39,6 +43,7 @@ export function createWorkspaceTerminalHydrationActions(
           )
         : null
       const ownershipTransfersByTabId = new Map<string, TerminalLayoutPtyOwnershipTransfer[]>()
+      let canonicalPaneTransfers: TerminalCanonicalPaneTransfer[] = []
       set((s) => {
         const runtimeSessionPlaceholders = buildRuntimeSessionPlaceholders({
           repos: s.repos,
@@ -223,10 +228,22 @@ export function createWorkspaceTerminalHydrationActions(
             )
           )
         }
+        canonicalPaneTransfers = resolveTerminalCanonicalPaneTransfers(
+          session,
+          hydrated.tabsByWorktree,
+          hydrated.terminalLayoutsByTabId
+        ).filter(
+          (transfer) =>
+            !ownershipTransferTabIds ||
+            ownershipTransferTabIds.has(transfer.toPaneKey.split(':')[0]!)
+        )
         return options?.replaceWorkspaceKeys
           ? targetScopedWorkspaceHydrationPatch(s, hydrated, session, options)
           : hydrated
       })
+      for (const transfer of canonicalPaneTransfers) {
+        get().transferAgentPaneAuthority(transfer)
+      }
       for (const [tabId, transfers] of ownershipTransfersByTabId) {
         transferNormalizedTerminalLayoutPtyOwnership(get(), tabId, transfers)
       }

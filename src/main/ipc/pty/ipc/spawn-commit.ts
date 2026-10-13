@@ -22,6 +22,7 @@ import { reflowHeadlessTerminalToCommittedGrid } from '../delivery/attached-pty-
 import { seedHeadlessTerminalFromSpawnResult } from '../pane/terminal-spawn-restore'
 import { markNativeWindowsConptyPty } from '../../../runtime/terminal-model-query-authority'
 import { commitPtyWithOpenCodePromptIntent } from '../../../opencode/opencode-startup-prompt-owner'
+import { prepareReattachedAgentPaneTransfer } from '../pane/reattached-agent-pane-transfer'
 
 export async function commitPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawnResult> {
   return commitPtyWithOpenCodePromptIntent(ctx, () => commitReservedPtyIpcSpawn(ctx))
@@ -29,6 +30,12 @@ export async function commitPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawn
 
 async function commitReservedPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpawnResult> {
   const args = ctx.args
+  const transferReattachedAgentPane = prepareReattachedAgentPaneTransfer({
+    store: ctx.deps.store,
+    result: ctx.result,
+    worktreeId: args.worktreeId,
+    paneKey: ctx.validatedPaneKey
+  })
   admitPtyReattachOwnership(ctx.deps.runtime, ctx.result)
   if (ctx.nativeWindowsConptySpawn) {
     markNativeWindowsConptyPty(ctx.result.id)
@@ -102,6 +109,7 @@ async function commitReservedPtyIpcSpawn(ctx: PtyIpcSpawnState): Promise<PtySpaw
     ctx.pendingRegistrationPtyId = null
   }
   publishPtyIpcSpawnCommit(ctx, committedSize)
+  transferReattachedAgentPane()
 
   // Admission must precede reflow: a replaced spawn cannot resize its successor's model.
   reflowHeadlessTerminalToCommittedGrid({

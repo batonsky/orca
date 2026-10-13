@@ -1,0 +1,41 @@
+name: Sidebar tab identity validation
+on:
+  push:
+    branches: [batonsky/sidebar-tab-identity-20261013]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ORCA_BACKGROUND_LAUNCH: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: config/.bun-version
+      - name: Prove regression fails on base
+        shell: bash
+        run: |
+          git restore --source=f0ccfcc0d32cd8ed61dc1d0b991f3fcb067cefa5 -- src/main/ipc/pty/ipc/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
+          set +e
+          node config/scripts/run-vitest.mjs run --config config/vitest.config.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts > red.log 2>&1
+          result=$?
+          set -e
+          cat red.log
+          git restore --source=HEAD -- src/main/ipc/pty/ipc/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
+          test "$result" -ne 0
+          rg 'AssertionError' red.log
+      - name: Verify fix and related contracts
+        run: |
+          node config/scripts/run-vitest.mjs run --config config/vitest.config.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-canonical-rows.test.ts src/main/agent-hooks/server-pane-authority.test.ts src/renderer/src/store/slices/agent-pane-authority.test.ts src/main/ipc/pty/ipc/spawn-commit-run-facts.test.ts
+      - name: Check changed source
+        run: pnpm exec oxfmt --check src/shared/terminal-canonical-pane-transfers.ts src/main/ipc/pty/pane/reattached-agent-pane-transfer.ts src/main/ipc/pty/ipc/spawn-commit.ts src/main/ipc/pty/runtime/spawn-commit.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts
