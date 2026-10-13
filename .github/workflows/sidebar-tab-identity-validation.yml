@@ -25,13 +25,13 @@ jobs:
       - name: Prove regression fails on base
         shell: bash
         run: |
-          git restore --source=f0ccfcc0d32cd8ed61dc1d0b991f3fcb067cefa5 -- src/main/ipc/pty/ipc/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
+          git restore --source=f0ccfcc0d32cd8ed61dc1d0b991f3fcb067cefa5 -- src/main/ipc/pty/ipc/spawn-commit.ts src/main/ipc/pty/runtime/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
           set +e
           node config/scripts/run-vitest.mjs run --config config/vitest.config.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts > red.log 2>&1
           result=$?
           set -e
           cat red.log
-          git restore --source=HEAD -- src/main/ipc/pty/ipc/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
+          git restore --source=HEAD -- src/main/ipc/pty/ipc/spawn-commit.ts src/main/ipc/pty/runtime/spawn-commit.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts
           test "$result" -ne 0
           node -e "const s=require('fs').readFileSync('red.log','utf8'); if(!s.includes('AssertionError') || /Failed to load|Cannot find module|ReferenceError/.test(s)) process.exit(1)"
       - name: Verify fix and related contracts

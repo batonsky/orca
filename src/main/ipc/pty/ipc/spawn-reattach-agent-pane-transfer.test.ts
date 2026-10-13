@@ -7,6 +7,9 @@ import { commitPtyIpcSpawn } from './spawn-commit'
 import type { PtySpawnIpcDeps } from './spawn-types'
 import { ptySizes } from '../delivery/visibility-state'
 import { ptyIncarnationById, ptyOwnership } from '../provider/ownership-state'
+import { createRuntimePtySpawnState } from '../runtime/spawn-state'
+import { commitRuntimePtySpawn } from '../runtime/spawn-commit'
+import type { PtyRuntimeControllerDeps } from '../runtime/controller-deps'
 
 const SOURCE = makePaneKey('source-tab', '11111111-1111-4111-8111-111111111111')
 const TARGET_LEAF = '22222222-2222-4222-8222-222222222222'
@@ -21,11 +24,14 @@ afterEach(() => {
   ptyIncarnationById.delete(PTY)
 })
 
-async function commit(options: {
-  savedIncarnation?: string
-  liveIncarnation?: string
-  failSave?: boolean
-}) {
+async function commit(
+  options: {
+    savedIncarnation?: string
+    liveIncarnation?: string
+    failSave?: boolean
+  },
+  entryPoint: 'renderer' | 'runtime' = 'renderer'
+) {
   const session = {
     ...getDefaultWorkspaceSession(),
     tabsByWorktree: { 'wt-1': [{ id: 'source-tab' }, { id: 'target-tab' }] },
@@ -64,39 +70,70 @@ async function commit(options: {
     worktreeId: 'wt-1',
     payload: { state: 'done', prompt: 'completed conversation', agentType: 'codex' }
   })
-  return commitPtyIpcSpawn(ctx)
+  if (entryPoint === 'renderer') return commitPtyIpcSpawn(ctx)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the runtime commit reads the same persistence and notification ports; no provider is launched.
+  const runtimeDeps = ports as unknown as PtyRuntimeControllerDeps
+  const runtimeCtx = createRuntimePtySpawnState(runtimeDeps, {
+    worktreeId: 'wt-1',
+    tabId: 'target-tab',
+    leafId: TARGET_LEAF,
+    connectionId: null,
+    cols: 80,
+    rows: 24
+  })
+  runtimeCtx.spawnIdentityPaneKey = TARGET
+  runtimeCtx.metadataLeafId = TARGET_LEAF
+  runtimeCtx.env = { ORCA_PANE_KEY: TARGET }
+  runtimeCtx.result = ctx.result
+  if (!runtimeDeps.store) throw new Error('missing test store')
+  runtimeCtx.hostSessionBinding = {
+    store: runtimeDeps.store,
+    worktreeId: 'wt-1',
+    tabId: 'target-tab',
+    leafId: TARGET_LEAF
+  }
+  return commitRuntimePtySpawn(runtimeCtx)
 }
 
 describe('reattach commit preserves agent status ownership', () => {
-  it('moves the host row and future physical-key observations to the committed tab', async () => {
-    await commit({})
-    expect(agentHookServer.getStatusSnapshot()).toEqual([
-      expect.objectContaining({ paneKey: TARGET, tabId: 'target-tab', state: 'done' })
-    ])
-    agentHookServer.ingestTerminalStatus({
-      paneKey: SOURCE,
-      tabId: 'source-tab',
-      worktreeId: 'wt-1',
-      payload: { state: 'working', prompt: 'next turn' }
-    })
-    expect(agentHookServer.getStatusSnapshot()).toEqual([
-      expect.objectContaining({ paneKey: TARGET, prompt: 'next turn' })
-    ])
-  })
+  it.each(['renderer', 'runtime'] as const)(
+    'moves the host row and future physical-key observations through %s commit',
+    async (entryPoint) => {
+      await commit({}, entryPoint)
+      expect(agentHookServer.getStatusSnapshot()).toEqual([
+        expect.objectContaining({ paneKey: TARGET, tabId: 'target-tab', state: 'done' })
+      ])
+      agentHookServer.ingestTerminalStatus({
+        paneKey: SOURCE,
+        tabId: 'source-tab',
+        worktreeId: 'wt-1',
+        payload: { state: 'working', prompt: 'next turn' }
+      })
+      expect(agentHookServer.getStatusSnapshot()).toEqual([
+        expect.objectContaining({ paneKey: TARGET, prompt: 'next turn' })
+      ])
+    }
+  )
 
-  it('does not move a row for a reused PTY id with a different process', async () => {
-    await commit({ liveIncarnation: 'process-2' })
-    expect(agentHookServer.getStatusSnapshot()).toEqual([
-      expect.objectContaining({ paneKey: SOURCE })
-    ])
-  })
+  it.each(['renderer', 'runtime'] as const)(
+    'does not move a row for a reused PTY id through %s commit',
+    async (entryPoint) => {
+      await commit({ liveIncarnation: 'process-2' }, entryPoint)
+      expect(agentHookServer.getStatusSnapshot()).toEqual([
+        expect.objectContaining({ paneKey: SOURCE })
+      ])
+    }
+  )
 
-  it('does not move a row when the binding save fails', async () => {
-    await expect(commit({ failSave: true })).rejects.toThrow(
-      'ORCA_TERMINAL_SESSION_STATE_SAVE_FAILED'
-    )
-    expect(agentHookServer.getStatusSnapshot()).toEqual([
-      expect.objectContaining({ paneKey: SOURCE })
-    ])
-  })
+  it.each(['renderer', 'runtime'] as const)(
+    'does not move a row when %s binding save fails',
+    async (entryPoint) => {
+      await expect(commit({ failSave: true }, entryPoint)).rejects.toThrow(
+        'ORCA_TERMINAL_SESSION_STATE_SAVE_FAILED'
+      )
+      expect(agentHookServer.getStatusSnapshot()).toEqual([
+        expect.objectContaining({ paneKey: SOURCE })
+      ])
+    }
+  )
 })
