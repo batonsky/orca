@@ -39,3 +39,5 @@ jobs:
           node config/scripts/run-vitest.mjs run --config config/vitest.config.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts src/renderer/src/store/slices/terminals-hydration-canonical-rows.test.ts src/main/agent-hooks/server-pane-authority.test.ts src/renderer/src/store/slices/agent-pane-authority.test.ts src/main/ipc/pty/ipc/spawn-commit-run-facts.test.ts
       - name: Check changed source
         run: pnpm exec oxfmt --check src/shared/terminal-canonical-pane-transfers.ts src/main/ipc/pty/pane/reattached-agent-pane-transfer.ts src/main/ipc/pty/ipc/spawn-commit.ts src/main/ipc/pty/runtime/spawn-commit.ts src/main/ipc/pty/ipc/spawn-reattach-agent-pane-transfer.test.ts src/renderer/src/store/terminals/workspace-terminal-hydration.ts src/renderer/src/store/slices/terminals-hydration-agent-pane-transfer.test.ts
+      - name: Typecheck main and renderer
+        run: pnpm tc:node && pnpm tc:web
